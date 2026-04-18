@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rawimagetoPrompt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0E0D14;
+    --surface: #17151F;
+    --surface2: #1E1C28;
+    --border: rgba(255,255,255,0.07);
+    --border-mid: rgba(255,255,255,0.12);
+    --purple: #7F77DD;
+    --purple-dark: #534AB7;
+    --purple-light: #AEAAEE;
+    --purple-dim: rgba(127,119,221,0.12);
+    --text: #F0EFF8;
+    --text-muted: #8A88A8;
+    --text-faint: #4A4865;
+    --green: #5DCE94;
+    --red: #E0635A;
+    --red-bg: rgba(224,99,90,0.1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2.5rem;
+    height: 60px;
+    border-bottom: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(14,13,20,0.9);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+  }
+
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    font-style: italic;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .logo span { color: var(--purple); font-style: normal; }
+
+  .nav-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.05em;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 2.5rem;
+    gap: 2.5rem;
+    align-items: start;
+  }
+
+  /* PANEL */
+  .panel {
+    background: var(--surface);
+    border: 0.5px solid var(--border-mid);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .panel-head {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .panel-body { padding: 1.5rem; }
+
+  /* FIELDS */
+  .api-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .field-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .field-label .req {
+    color: var(--red);
+    font-size: 10px;
+  }
+
+  .api-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .api-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border-mid);
+    border-radius: 10px;
+    padding: 10px 40px 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .api-input:focus { border-color: var(--purple); }
+  .api-input::placeholder { color: var(--text-faint); }
+
+  .eye-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: color 0.2s;
+  }
+
+  .eye-btn:hover { color: var(--text-muted); }
+
+  .api-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .api-hint a { color: var(--purple-light); text-decoration: none; }
+
+  /* DROP ZONE */
+  .drop-zone {
+    border: 1.5px dashed var(--border-mid);
+    border-radius: 12px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 160px;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1.5rem;
+  }
+
+  .drop-zone:hover, .drop-zone.over {
+    border-color: var(--purple);
+    background: var(--purple-dim);
+  }
+
+  .drop-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .dz-icon {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--purple-dim);
+    border: 0.5px solid rgba(127,119,221,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dz-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .dz-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  /* PREVIEW */
+  .preview-box {
+    display: none;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 0.5px solid var(--border-mid);
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .preview-box.show { display: block; }
+
+  .preview-box img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-meta {
+    padding: 10px 14px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .preview-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .clear-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    background: var(--red-bg);
+    border: 0.5px solid rgba(224,99,90,0.3);
+    border-radius: 8px;
+    padding: 5px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+
+  /* SETTINGS */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1rem;
+  }
+
+  .chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 13px;
+    border-radius: 999px;
+    border: 0.5px solid var(--border-mid);
+    cursor: pointer;
+    color: var(--text-muted);
+    background: transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .chip:hover { border-color: var(--purple); color: var(--purple-light); }
+  .chip.on { background: var(--purple-dim); border-color: var(--purple); color: var(--purple-light); }
+
+  .select-styled {
+    background: var(--surface2);
+    border: 0.5px solid var(--border-mid);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+    margin-bottom: 12px;
+  }
+
+  .select-styled:focus { border-color: var(--purple); }
+
+  .gen-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--purple-dark);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    letter-spacing: 0.02em;
+    transition: background 0.2s;
+  }
+
+  .gen-btn:disabled { background: var(--surface2); color: var(--text-faint); cursor: not-allowed; }
+
+  /* ERRORS */
+  .err-box {
+    display: none;
+    background: var(--red-bg);
+    border: 0.5px solid rgba(224,99,90,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 1rem;
+    line-height: 1.5;
+  }
+  .err-box.show { display: block; }
+
+  /* RESULTS */
+  .result-panel { position: sticky; top: 80px; }
+  .empty-state {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .loading-state {
+    display: none;
+    background: var(--surface);
+    border: 0.5px solid var(--border-mid);
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .loading-state.show { display: flex; }
+
+  .result-box {
+    display: none;
+    background: var(--surface);
+    border: 0.5px solid var(--border-mid);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .result-box.show { display: block; }
+
+  .result-head {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .copy-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 0.5px solid var(--border-mid);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .copy-btn.ok { color: var(--green); border-color: var(--green); }
+
+  .tabs { display: flex; border-bottom: 0.5px solid var(--border); }
+  .tab {
+    flex: 1; padding: 12px; border: none; background: transparent;
+    color: var(--text-faint); font-family: 'DM Mono', monospace; font-size: 11px;
+    cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .tab.on { color: var(--purple-light); border-bottom-color: var(--purple); }
+
+  .prompt-content { padding: 1.5rem; }
+  .pbox { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); line-height: 1.85; white-space: pre-wrap; }
+  
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tag {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    background: var(--surface2); border: 0.5px solid var(--border-mid);
+    border-radius: 999px; padding: 4px 12px; color: var(--text-muted);
+  }
+
+  footer { padding: 2.5rem; border-top: 0.5px solid var(--border); text-align: center; font-size: 10px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+
+  @media (max-width: 860px) {
+    .main { grid-template-columns: 1fr; padding: 1.5rem; gap: 1.5rem; }
+    .result-panel { position: static; }
+  }
+
+  /* Spinner */
+  .load-spinner { width: 30px; height: 30px; border: 2px solid var(--border-mid); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">raw<span>image</span>toPrompt</div>
+  <div class="nav-tag">// multi-ai vision</div>
+</nav>
+
+<div class="main">
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">configuration</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- PROVIDER SELECTION -->
+      <div class="field-label">AI Provider</div>
+      <select id="provider" class="select-styled">
+        <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+        <option value="openai">OpenAI (GPT-4o)</option>
+        <option value="google">Google (Gemini 1.5 Pro)</option>
+      </select>
+
+      <!-- API KEY -->
+      <div class="api-section">
+        <div class="field-label">API Key <span class="req">required</span></div>
+        <div class="api-input-wrap">
+          <input class="api-input" id="apiKey" type="password" placeholder="Paste your key here...">
+          <button class="eye-btn" id="eyeBtn" type="button">
+            <svg id="eyeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="api-hint" id="apiHint">
+          Get your key at <a href="https://console.anthropic.com" target="_blank" id="providerLink">console.anthropic.com</a>
+        </div>
+      </div>
+
+      <!-- IMAGE UPLOAD -->
+      <div class="field-label">Source Image</div>
+      <div class="drop-zone" id="dz">
+        <input type="file" id="fileIn" accept="image/*">
+        <div class="dz-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7F77DD" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="dz-label">Drop or click to upload</div>
+      </div>
+
+      <div class="preview-box" id="prevBox">
+        <img id="prevImg" src="">
+        <div class="preview-meta">
+          <div class="preview-info" id="prevInfo">—</div>
+          <button class="clear-btn" id="clearBtn">✕</button>
+        </div>
+      </div>
+
+      <!-- STYLE SELECTION -->
+      <div class="field-label">Target Style</div>
+      <div class="chips" id="chips">
+        <div class="chip on" data-v="midjourney">midjourney</div>
+        <div class="chip" data-v="stable-diffusion">sdxl</div>
+        <div class="chip" data-v="dalle">dall·e 3</div>
+        <div class="chip" data-v="flux">flux.1</div>
+        <div class="chip" data-v="universal">universal</div>
+      </div>
+
+      <div class="field-label">Detail Level</div>
+      <select id="detail" class="select-styled">
+        <option value="concise">Concise</option>
+        <option value="standard" selected>Standard</option>
+        <option value="verbose">Verbose</option>
+      </select>
+
+      <button class="gen-btn" id="genBtn" disabled>Generate Prompt</button>
+      <div class="err-box" id="errBox"></div>
+    </div>
+  </div>
+
+  <div class="result-panel">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-title">Ready for analysis</div>
+      <div class="empty-sub">Upload an image and set your API key to begin.</div>
+    </div>
+
+    <div class="loading-state" id="loadingState">
+      <div class="load-spinner"></div>
+      <div class="load-label">AI is analyzing pixels...</div>
+    </div>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-head">
+        <div class="panel-title">Engine Result</div>
+        <button class="copy-btn" id="copyBtn">copy</button>
+      </div>
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-t="full">full</button>
+        <button class="tab" data-t="short">short</button>
+        <button class="tab" data-t="tags">tags</button>
+        <button class="tab" data-t="negative">negative</button>
+      </div>
+      <div class="prompt-content">
+        <div id="pFull" class="pbox"></div>
+        <div id="pShort" class="pbox" style="display:none"></div>
+        <div id="pTags" class="tags-wrap" style="display:none"></div>
+        <div id="pNeg" class="pbox" style="display:none; color:var(--text-muted)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  RAW IMAGE TO PROMPT // STANDALONE CLIENT // NO DATA IS STORED ON SERVERS
+</footer>
+
+<script>
+  let b64 = null, mime = null, pStyle = 'midjourney', activeTab = 'full', promptData = {};
+
+  const elements = {
+    provider: document.getElementById('provider'),
+    apiKey: document.getElementById('apiKey'),
+    providerLink: document.getElementById('providerLink'),
+    dz: document.getElementById('dz'),
+    fileIn: document.getElementById('fileIn'),
+    prevBox: document.getElementById('prevBox'),
+    prevImg: document.getElementById('prevImg'),
+    genBtn: document.getElementById('genBtn'),
+    errBox: document.getElementById('errBox'),
+    loading: document.getElementById('loadingState'),
+    empty: document.getElementById('emptyState'),
+    result: document.getElementById('resultBox'),
+    copy: document.getElementById('copyBtn')
+  };
+
+  const providers = {
+    anthropic: { 
+      link: 'https://console.anthropic.com', 
+      placeholder: 'sk-ant-api...',
+      model: 'claude-3-5-sonnet-20240620'
+    },
+    openai: { 
+      link: 'https://platform.openai.com', 
+      placeholder: 'sk-proj-...',
+      model: 'gpt-4o'
+    },
+    google: { 
+      link: 'https://aistudio.google.com', 
+      placeholder: 'AIzaSy...',
+      model: 'gemini-1.5-pro'
+    }
+  };
+
+  // Provider change logic
+  elements.provider.addEventListener('change', () => {
+    const p = providers[elements.provider.value];
+    elements.providerLink.href = p.link;
+    elements.providerLink.textContent = p.link.replace('https://', '');
+    elements.apiKey.placeholder = p.placeholder;
+  });
+
+  // Toggle Visibility
+  document.getElementById('eyeBtn').addEventListener('click', () => {
+    elements.apiKey.type = elements.apiKey.type === 'password' ? 'text' : 'password';
+  });
+
+  // File Handling
+  function handleFile(f) {
+    if (!f.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      b64 = e.target.result.split(',')[1];
+      mime = f.type;
+      elements.prevImg.src = e.target.result;
+      elements.dz.style.display = 'none';
+      elements.prevBox.classList.add('show');
+      checkReady();
+    };
+    reader.readAsDataURL(f);
+  }
+
+  elements.fileIn.addEventListener('change', e => handleFile(e.target.files[0]));
+  elements.dz.addEventListener('dragover', e => { e.preventDefault(); elements.dz.classList.add('over'); });
+  elements.dz.addEventListener('drop', e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    b64 = null; elements.prevBox.classList.remove('show'); elements.dz.style.display = 'flex'; checkReady();
+  });
+
+  function checkReady() { elements.genBtn.disabled = !(b64 && elements.apiKey.value.trim()); }
+  elements.apiKey.addEventListener('input', checkReady);
+
+  // Style selector
+  document.getElementById('chips').addEventListener('click', e => {
+    if (!e.target.classList.contains('chip')) return;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    e.target.classList.add('on');
+    pStyle = e.target.dataset.v;
+  });
+
+  // Tab switcher
+  document.getElementById('tabs').addEventListener('click', e => {
+    if (!e.target.classList.contains('tab')) return;
+    activeTab = e.target.dataset.t;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    e.target.classList.add('on');
+    ['pFull', 'pShort', 'pTags', 'pNeg'].forEach(id => document.getElementById(id).style.display = 'none');
+    const map = { full: 'pFull', short: 'pShort', tags: 'pTags', negative: 'pNeg' };
+    document.getElementById(map[activeTab]).style.display = activeTab === 'tags' ? 'flex' : 'block';
+  });
+
+  // API Call
+  elements.genBtn.addEventListener('click', async () => {
+    const key = elements.apiKey.value.trim();
+    const provider = elements.provider.value;
+    const detail = document.getElementById('detail').value;
+    
+    elements.errBox.classList.remove('show');
+    elements.empty.style.display = 'none';
+    elements.result.classList.remove('show');
+    elements.loading.classList.add('show');
+    elements.genBtn.disabled = true;
+
+    const systemPrompt = `Analyze the image and return ONLY a JSON object: {"full":"...","short":"...","tags":["tag1","tag2"],"negative":"..."}. Style: ${pStyle}. Detail level: ${detail}.`;
+
+    try {
+      let response, resultText;
+
+      if (provider === 'anthropic') {
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: providers.anthropic.model,
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mime, data: b64 } }, { type: 'text', text: "Generate prompt." }] }]
+          })
+        });
+        const data = await response.json();
+        resultText = data.content[0].text;
+
+      } else if (provider === 'openai') {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({
+            model: providers.openai.model,
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: [{ type: 'text', text: "Describe this image for an AI generator." }, { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } }] }]
+          })
+        });
+        const data = await response.json();
+        resultText = data.choices[0].message.content;
+
+      } else if (provider === 'google') {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt + " Describe this image." }, { inline_data: { mime_type: mime, data: b64 } }] }]
+          })
+        });
+        const data = await response.json();
+        resultText = data.candidates[0].content.parts[0].text;
+      }
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+      // Parse JSON logic
+      const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : resultText);
+      promptData = parsed;
+
+      // Update UI
+      document.getElementById('pFull').textContent = parsed.full;
+      document.getElementById('pShort').textContent = parsed.short;
+      document.getElementById('pNeg').textContent = parsed.negative;
+      const tagsBox = document.getElementById('pTags');
+      tagsBox.innerHTML = '';
+      parsed.tags.forEach(t => {
+        const span = document.createElement('span'); span.className = 'tag'; span.textContent = t; tagsBox.appendChild(span);
+      });
+
+      elements.loading.classList.remove('show');
+      elements.result.classList.add('show');
+    } catch (err) {
+      elements.loading.classList.remove('show');
+      elements.empty.style.display = 'flex';
+      elements.errBox.textContent = err.message;
+      elements.errBox.classList.add('show');
+    } finally {
+      elements.genBtn.disabled = false;
+    }
+  });
+
+  // Copy
+  elements.copy.addEventListener('click', () => {
+    let text = activeTab === 'tags' ? promptData.tags.join(', ') : promptData[activeTab];
+    navigator.clipboard.writeText(text);
+    elements.copy.textContent = '✓';
+    elements.copy.classList.add('ok');
+    setTimeout(() => { elements.copy.textContent = 'copy'; elements.copy.classList.remove('ok'); }, 2000);
+  });
+</script>
+</body>
+</html>
